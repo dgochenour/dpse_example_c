@@ -80,7 +80,6 @@ int main(void)
     RT_Registry_T *registry = NULL;
     struct UDP_InterfaceFactoryProperty *udp_property = NULL;
     DDS_Topic *topic = NULL;
-    char topic_name[255];
     DDS_Subscriber *subscriber = NULL;
     DDS_DataReader *datareader = NULL;
     struct DDS_DataReaderQos dr_qos = DDS_DataReaderQos_INITIALIZER;

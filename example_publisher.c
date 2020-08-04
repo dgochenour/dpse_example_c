@@ -38,7 +38,6 @@ int main(void)
     RT_Registry_T *registry = NULL;
     struct UDP_InterfaceFactoryProperty *udp_property = NULL;
     DDS_Topic *topic = NULL;
-    char topic_name[255];
     DDS_Publisher *publisher = NULL;
     DDS_DataWriter *datawriter = NULL;
     struct DDS_DataWriterQos dw_qos = DDS_DataWriterQos_INITIALIZER;
@@ -125,7 +124,7 @@ int main(void)
     	LOG(1, "failed to add interface")
 
     }
-    
+
 #endif
 
     if(!RT_Registry_register(
