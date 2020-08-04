@@ -106,6 +106,28 @@ int main(void)
     *REDA_StringSeq_get_reference(&udp_property->allow_interface,1) = 
             DDS_String_dup(eth_nic_name); 
 
+#if 0  
+
+    // When you are working on an RTOS or other lightweight OS, the middleware
+    // may not be able to get the NIC information automatically. In that case, 
+    // the code below can be used to manually tell the middleware about an 
+    // interface. The interface name ("en0" below) could be anything, but should
+    // match what you included in the "allow_interface" calls above.
+
+    if (!UDP_InterfaceTable_add_entry(
+    		&udp_property->if_table,
+            0xc0a864c8,	// IP address of 192.168.100.200
+			0xffffff00, // netmask of 255.255.255.0
+			"en0",
+			UDP_INTERFACE_INTERFACE_UP_FLAG |
+			UDP_INTERFACE_INTERFACE_MULTICAST_FLAG)) {
+
+    	LOG(1, "failed to add interface")
+
+    }
+    
+#endif
+
     if(!RT_Registry_register(
             registry, 
             NETIO_DEFAULT_UDP_NAME,
