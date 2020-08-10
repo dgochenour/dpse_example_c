@@ -16,6 +16,9 @@
 #include "examplePlugin.h"
 #include "exampleSupport.h"
 
+// DPSE Discovery-related constants defined in this header
+#include "discovery_constants.h"
+
 
 int main(void)
 {
@@ -23,8 +26,6 @@ int main(void)
     char *peer = "127.0.0.1";
     char *loopback_name = "Loopback Pseudo-Interface 1";
     char *eth_nic_name = "Wireless LAN adapter Wi-Fi";
-    char *local_participant_name = "publisher";
-    char *remote_participant_name = "subscriber";
     int domain_id = 100;
 
     DDS_DomainParticipantFactory *dpf = NULL;
@@ -181,9 +182,10 @@ int main(void)
     dp_qos.resource_limits.remote_reader_allocation = 8;
     dp_qos.resource_limits.remote_writer_allocation = 8;
 
-    //  set the name of the local DomainParticipant
+    // set the name of the local DomainParticipant (i.e. - this application) 
+    // from the constants defined in discovery_constants.h
     // (this is required for DPSE discovery)
-    strcpy(dp_qos.participant_name.name, local_participant_name);
+    strcpy(dp_qos.participant_name.name, k_PARTICIANT01_NAME);
 
     // now the DomainParticipant can be created
     dp = DDS_DomainParticipantFactory_create_participant(
@@ -218,8 +220,9 @@ int main(void)
         printf("ERROR: topic == NULL\n");
     }
 
-    // assert remote DomainParticipant
-    retcode = DPSE_RemoteParticipant_assert(dp, remote_participant_name);
+    // assert the remote DomainParticipant whos name is held in 
+    // the constant k_PARTICIANT02_NAME, defined in discovery_constants.h
+    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIANT02_NAME);
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to assert remote participant\n");
     }
@@ -236,8 +239,9 @@ int main(void)
 
     // Configure the DataWriter's QoS. Note that the 'rtps_object_id' that we 
     // assign to our own DataWriter here needs to be the same number the remote
-    // DataReader will configure for its remote peer.
-    dw_qos.protocol.rtps_object_id = 100;
+    // DataReader will configure for its remote peer. We are defining these IDs
+    // and other constants in discovery_constants.h
+    dw_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIANT01_DW01;
     dw_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
     dw_qos.resource_limits.max_samples_per_instance = 32;
     dw_qos.resource_limits.max_instances = 2;
@@ -258,22 +262,23 @@ int main(void)
         printf("ERROR: datawriter == NULL\n");
     }   
 
-    // When we use Dynamic Participant Static Endpoint (DPSE) discovery we must
-    // setup information about any DataReaders we are expecting to discover. 
-    // This information includes a unique object ID for the remote peer, as well
-    // as its Topic, type, and QoS. 
-    rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 200;
+    // When we use DPSE discovery we must mannually setup information about any 
+    // DataReaders we are expecting to discover. This information includes a 
+    // unique object ID for the remote peer (we are defining this in 
+    // discovery_constants.h), as well as its Topic, type, and QoS. 
+    rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
+            k_OBJ_ID_PARTICIANT02_DR01;
     rem_subscription_data.topic_name = DDS_String_dup(my_topic_name);
     rem_subscription_data.type_name = 
             DDS_String_dup(my_typeTypePlugin_get_default_type_name());
     rem_subscription_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
 
     // Now we can assert that a remote DomainParticipant (with the name held in
-    // remote_participant_name) will contain a DataReader described by the 
+    // k_PARTICIANT02_NAME) will contain a DataReader described by the 
     // information in the rem_subscription_data struct.
     retcode = DPSE_RemoteSubscription_assert(
             dp,
-            remote_participant_name,
+            k_PARTICIANT02_NAME,
             &rem_subscription_data,
             my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
     if (retcode != DDS_RETCODE_OK) {
