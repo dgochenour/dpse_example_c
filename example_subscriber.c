@@ -19,6 +19,18 @@
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
 
+void my_typeSubscriber_on_subscription_matched(
+        void *listener_data,
+        DDS_DataReader * reader,
+        const struct DDS_SubscriptionMatchedStatus *status)
+{
+    if (status->current_count_change > 0) {
+        printf("INFO: Matched a publisher\n");
+    } else if (status->current_count_change < 0) {
+        printf("INFO: Unmatched a publisher\n");
+    }
+}
+
 void my_typeSubscriber_on_data_available(
         void *listener_data,
         DDS_DataReader * reader)
@@ -279,6 +291,7 @@ int main(void)
     // Configure the listener callback. This listener will get passed to the 
     // DataReader when we create it
     dr_listener.on_data_available = my_typeSubscriber_on_data_available;
+    dr_listener.on_subscription_matched = my_typeSubscriber_on_subscription_matched;
 
     // Configure the DataReader's QoS. Note that the 'rtps_object_id' that we 
     // assign to our own DataReader here needs to be the same number the remote
@@ -300,7 +313,7 @@ int main(void)
             DDS_Topic_as_topicdescription(topic), 
             &dr_qos,
             &dr_listener,
-            DDS_DATA_AVAILABLE_STATUS);
+            DDS_DATA_AVAILABLE_STATUS | DDS_SUBSCRIPTION_MATCHED_STATUS);
     if(datareader == NULL) {
         printf("ERROR: datareader == NULL\n");
     }
