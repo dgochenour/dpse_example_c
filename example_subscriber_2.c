@@ -19,21 +19,7 @@
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
 
-void my_typeSubscriber_on_subscription_matched(
-        void *listener_data,
-        DDS_DataReader * reader,
-        const struct DDS_SubscriptionMatchedStatus *status)
-{
-    if (status->current_count_change > 0) {
-        printf("INFO: Matched a publisher\n");
-    } else if (status->current_count_change < 0) {
-        printf("INFO: Unmatched a publisher\n");
-    }
-}
-
-void my_typeSubscriber_on_data_available(
-        void *listener_data,
-        DDS_DataReader * reader)
+void take_the_data(DDS_DataReader * reader)
 {
     my_typeDataReader *narrowed_reader = my_typeDataReader_narrow(reader);
     struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
@@ -96,12 +82,19 @@ int main(void)
     DDS_Subscriber *subscriber = NULL;
     DDS_DataReader *datareader = NULL;
     struct DDS_DataReaderQos dr_qos = DDS_DataReaderQos_INITIALIZER;
-    struct DDS_DataReaderListener dr_listener = DDS_DataReaderListener_INITIALIZER;
     struct DDS_PublicationBuiltinTopicData rem_publication_data =
         DDS_PublicationBuiltinTopicData_INITIALIZER;
     DDS_Entity *entity;
 
+    // Waitset related variables
+    DDS_WaitSet *waitset = NULL;
+    DDS_StatusCondition *dr_condition = NULL;
+    struct DDS_ConditionSeq active_conditions = DDS_SEQUENCE_INITIALIZER;
+    struct DDS_Duration_t wait_timeout = { 10, 0 }; /* 10 seconds */
+    int num_active_conditions; // number of active conditions
+
     DDS_ReturnCode_t retcode;
+    int i;
 
     // create the DomainParticipantFactory and registry so that we can make some 
     // changes to the default values
@@ -288,11 +281,6 @@ int main(void)
         printf("ERROR: subscriber == NULL\n");
     }
 
-    // Configure the listener callback. This listener will get passed to the 
-    // DataReader when we create it
-    dr_listener.on_data_available = my_typeSubscriber_on_data_available;
-    dr_listener.on_subscription_matched = my_typeSubscriber_on_subscription_matched;
-
     // Configure the DataReader's QoS. Note that the 'rtps_object_id' that we 
     // assign to our own DataReader here needs to be the same number the remote
     // DataWriter will configure for its remote peer. We are defining these IDs
@@ -312,11 +300,41 @@ int main(void)
             subscriber,
             DDS_Topic_as_topicdescription(topic), 
             &dr_qos,
-            &dr_listener,
-            DDS_DATA_AVAILABLE_STATUS | DDS_SUBSCRIPTION_MATCHED_STATUS);
+            NULL,
+            DDS_STATUS_MASK_NONE);
     if(datareader == NULL) {
         printf("ERROR: datareader == NULL\n");
     }
+
+    if (!DDS_ConditionSeq_initialize(&active_conditions)) {
+        printf("cannot initialize active_conditions\n");
+    }
+    if (!DDS_ConditionSeq_set_maximum(&active_conditions, 1)) {
+        printf("cannot set maximum of active_conditions\n");
+    }
+
+    // create the WaitSet
+    waitset = DDS_WaitSet_new();
+    if (waitset == NULL ) {
+        printf("waitset == NULL\n");
+    }
+
+    // get and configure the DataReader's status condition
+    dr_condition = DDS_Entity_get_statuscondition(DDS_DataReader_as_entity(datareader));
+    retcode = DDS_StatusCondition_set_enabled_statuses(
+            dr_condition,
+            DDS_DATA_AVAILABLE_STATUS | DDS_SUBSCRIPTION_MATCHED_STATUS);
+    if (retcode != DDS_RETCODE_OK) {
+        printf("Cannot set status condition's enabled statuses\n");
+    }
+
+    // attach the condition to the waitset 
+    retcode = DDS_WaitSet_attach_condition(waitset,
+            DDS_StatusCondition_as_condition(dr_condition));
+    if (retcode != DDS_RETCODE_OK) {
+        printf("Cannot attach DR condition to waitset\n");
+    }
+
     // When we use DPSE discovery we must mannually setup information about any 
     // DataWriters we are expecting to discover. This information includes a 
     // unique object ID for the remote peer (we are defining this in 
@@ -349,8 +367,56 @@ int main(void)
     }
 
     printf("Waiting for samples to arrive, press Ctrl-C to exit\n"); 
-    while(1) {
-        OSAPI_Thread_sleep(10000); // sleep for 10s, then loop again
-    }    
+    while (1) {
+
+        retcode = DDS_RETCODE_ERROR;
+        retcode = DDS_WaitSet_wait(waitset, &active_conditions, &wait_timeout);
+        if (retcode == DDS_RETCODE_TIMEOUT) {
+            printf("DDS_WaitSet_wait() timed out: no conditions were triggered.\n");
+            continue;
+        } else if (retcode != DDS_RETCODE_OK) {
+            printf("DDS_WaitSet_wait() returned error: %d\n", retcode);
+            break;
+        }
+
+        // get the number of active conditions, then loop through them
+        num_active_conditions = DDS_ConditionSeq_get_length(&active_conditions);
+        for (i = 0; i < num_active_conditions; ++i) {
+            
+            // Get the current condition and compare it with any Status
+            // Conditions previously defined. 
+            DDS_Condition *this_condition =
+                    *DDS_ConditionSeq_get_reference(&active_conditions, i);
+    
+            if (this_condition == DDS_StatusCondition_as_condition(dr_condition)) {
+                
+                // see which status(es) changed
+                DDS_StatusMask triggeredmask = 
+                        DDS_Entity_get_status_changes((DDS_Entity *)datareader);
+                
+                if (triggeredmask & DDS_DATA_AVAILABLE_STATUS) {
+                
+                    take_the_data(datareader);
+                
+                } else if (triggeredmask & DDS_SUBSCRIPTION_MATCHED_STATUS) {
+                
+                    struct DDS_SubscriptionMatchedStatus status = 
+                            DDS_SubscriptionMatchedStatus_INITIALIZER;
+                    DDS_DataReader_get_subscription_matched_status(datareader, &status);
+                    if (status.current_count_change > 0) {
+                        printf("INFO: Matched a publisher\n");
+                    } else if (status.current_count_change < 0) {
+                        printf("INFO: Unmatched a publisher\n");
+                    }
+                
+                }
+            } else if (0) {
+                // If we had attached more than one status condition (for 
+                // example, if there was more than one reader in this app) then
+                // we would need to implement these "else if" blocks to see 
+                // which entity's status condition changed.
+            }
+        }
+    }  
 }
 
