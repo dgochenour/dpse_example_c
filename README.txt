@@ -6,12 +6,17 @@
 #
 ################################################################################
 
-This application contains a publisher and subscriber of a simple IDL-defined 
-data type. The purpose of this example is to demonstrate how static endpoint
+This example contains a publishing application and two subscribing applications
+for a simple IDL-defined data type. "example_subscriber_1" uses a listener to be
+notified of events, and "example_subscriber_2" uses a WaitSet.
+
+The purpose of this example is to demonstrate how static endpoint
 discovery (DPSE) can be used between a publisher and subscriber.
 
-Note that actual safety-certified libraries (ISO26262, for example) will only 
-implement the static DPSE discovery plugin, so DPDE is not an option. 
+Note that actual safety-certified libraries generated from the RTI Connext Micro
+Cert product only implement the static DPSE discovery plugin, so DPDE is not 
+an option. 
+
 
 Source Overview
 ===============
@@ -28,10 +33,10 @@ manually, with an example command like this:
 The generated source files are example.c, exampleSupport.c, and 
 examplePlugin.c. Associated header files are also generated.
  
-The DataWriter and DataReader for this type are created and used in 
-example_publisher.c and example_subscriber.c, respectively. Each 
-application-- publisher and subscriber-- has its own DomainParticipant since 
-the intent is that the executables may run independently of each other.
+The DataWriter and DataReaders for this type are created and used in 
+example_publisher.c and example_subscriber_1.c and example_subscriber_2.c, 
+respectively. Each application has its own DomainParticipant since the intent 
+is that the executables may run independently of each other.
 
 
 Generated Files Overview
@@ -41,9 +46,13 @@ example_publisher.c:
 This file contains the logic for creating a Publisher and a DataWriter, and 
 sending data.  
 
-example_subscriber.c:
+example_subscriber_1.c:
 This file contains the logic for creating a Subscriber and a DataReader, a 
 DataReaderListener, and listening for data.
+
+example_subscriber_2.c:
+This file contains the logic for creating a Subscriber and a DataReader, a 
+WaitSet, and how to use the WaitSet to be notified of events.
 
 examplePlugin.c:
 This file creates the plugin for the example data type.  This file contains 
@@ -86,8 +95,6 @@ subscriber code that may need to be changed to match your system:
     char *peer = "127.0.0.1";
     char *loopback_name = "Loopback Pseudo-Interface 1";
     char *eth_nic_name = "Wireless LAN adapter Wi-Fi";
-    char *local_participant_name = "publisher";
-    char *remote_participant_name = "subscriber";
     int domain_id = 100;
 
 By default, the remote peer is set to the loopback address (allowing the 
@@ -99,11 +106,15 @@ example is running (the defaults work for a Windows 10 machine.)
 Running example_publisher and example_subscriber
 ================================================
 
-Using a Linux system as the example, run the subscriber in one terminal with the 
-command:
+Using a Windows10 system as the example, run the first subscriber in one 
+terminal with the command:
 
-    > objs\x64Win64VS2017\Release\example_subscriber.exe 
+    > objs\x64Win64VS2017\Release\example_subscriber_1.exe 
+    
+Run the second subscriber in another terminal with the command:
 
-And run the publisher in another terminal with the command:
+    > objs\x64Win64VS2017\Release\example_subscriber_2.exe 
+
+And run the publisher in a third terminal with the command:
 
     > objs\x64Win64VS2017\Release\example_publisher.exe 
