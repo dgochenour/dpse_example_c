@@ -59,15 +59,26 @@ include_directories(
 link_directories($ENV{RTIMEHOME}/lib/${RTIME_TARGET_NAME})
 
 ################################################################################
-# example_subscriber
+# example_subscriber_1
 ################################################################################
-add_executable(example_subscriber 
-    ${CMAKE_CURRENT_SOURCE_DIR}/example_subscriber.${SOURCE_EXTENSION_C}
+add_executable(example_subscriber_1 
+    ${CMAKE_CURRENT_SOURCE_DIR}/example_subscriber_1.${SOURCE_EXTENSION_C}
     ${IDL_GEN_C}
     ${IDL_GEN_H}
 )
 
-target_link_libraries(example_subscriber ${MICRO_C_LIBS} ${PLATFORM_LIBS})
+target_link_libraries(example_subscriber_1 ${MICRO_C_LIBS} ${PLATFORM_LIBS})
+
+################################################################################
+# example_subscriber_2
+################################################################################
+add_executable(example_subscriber_2 
+    ${CMAKE_CURRENT_SOURCE_DIR}/example_subscriber_2.${SOURCE_EXTENSION_C}
+    ${IDL_GEN_C}
+    ${IDL_GEN_H}
+)
+
+target_link_libraries(example_subscriber_2 ${MICRO_C_LIBS} ${PLATFORM_LIBS})
 
 ################################################################################
 # example_publisher
