@@ -172,20 +172,20 @@ int main(void)
     // configure the DomainParticipant's resource limits... these are just 
     // examples, if there are more remote or local endpoints these values would
     // need to be increased
-    dp_qos.resource_limits.max_destination_ports = 32;
-    dp_qos.resource_limits.max_receive_ports = 32;
+    dp_qos.resource_limits.max_destination_ports = 4;
+    dp_qos.resource_limits.max_receive_ports = 4;
     dp_qos.resource_limits.local_topic_allocation = 1;
     dp_qos.resource_limits.local_type_allocation = 1;
     dp_qos.resource_limits.local_reader_allocation = 1;
     dp_qos.resource_limits.local_writer_allocation = 1;
-    dp_qos.resource_limits.remote_participant_allocation = 8;
-    dp_qos.resource_limits.remote_reader_allocation = 8;
-    dp_qos.resource_limits.remote_writer_allocation = 8;
+    dp_qos.resource_limits.remote_participant_allocation = 2;
+    dp_qos.resource_limits.remote_reader_allocation = 2;
+    dp_qos.resource_limits.remote_writer_allocation = 2;
 
     // set the name of the local DomainParticipant (i.e. - this application) 
     // from the constants defined in discovery_constants.h
     // (this is required for DPSE discovery)
-    strcpy(dp_qos.participant_name.name, k_PARTICIANT01_NAME);
+    strcpy(dp_qos.participant_name.name, k_PARTICIPANT01_NAME);
 
     // now the DomainParticipant can be created
     dp = DDS_DomainParticipantFactory_create_participant(
@@ -220,9 +220,13 @@ int main(void)
         printf("ERROR: topic == NULL\n");
     }
 
-    // assert the remote DomainParticipant whos name is held in 
-    // the constant k_PARTICIANT02_NAME, defined in discovery_constants.h
-    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIANT02_NAME);
+    // assert the 2 remote DomainParticipants (whos names are defined in 
+    // discovery_constants.h) that we are expecting to discover
+    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT02_NAME);
+    if(retcode != DDS_RETCODE_OK) {
+        printf("ERROR: failed to assert remote participant\n");
+    }
+    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT03_NAME);
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to assert remote participant\n");
     }
@@ -241,9 +245,10 @@ int main(void)
     // assign to our own DataWriter here needs to be the same number the remote
     // DataReader will configure for its remote peer. We are defining these IDs
     // and other constants in discovery_constants.h
-    dw_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIANT01_DW01;
+    dw_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIPANT01_DW01;
     dw_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
-    dw_qos.resource_limits.max_samples_per_instance = 32;
+    dw_qos.writer_resource_limits.max_remote_readers = 2;
+    dw_qos.resource_limits.max_samples_per_instance = 16;
     dw_qos.resource_limits.max_instances = 2;
     dw_qos.resource_limits.max_samples = dw_qos.resource_limits.max_instances *
             dw_qos.resource_limits.max_samples_per_instance;
@@ -263,22 +268,45 @@ int main(void)
     }   
 
     // When we use DPSE discovery we must mannually setup information about any 
-    // DataReaders we are expecting to discover. This information includes a 
-    // unique object ID for the remote peer (we are defining this in 
+    // DataReaders we are expecting to discover, and assert them. In this 
+    // example code we will do this for 2 remote DataReaders. This information 
+    // includes a unique  object ID for the remote peer (we are defining this in 
     // discovery_constants.h), as well as its Topic, type, and QoS. 
+
+    // first remote DataReader
     rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
-            k_OBJ_ID_PARTICIANT02_DR01;
+            k_OBJ_ID_PARTICIPANT02_DR01;
     rem_subscription_data.topic_name = DDS_String_dup(my_topic_name);
     rem_subscription_data.type_name = 
             DDS_String_dup(my_typeTypePlugin_get_default_type_name());
     rem_subscription_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
 
-    // Now we can assert that a remote DomainParticipant (with the name held in
+    // Assert that a remote DomainParticipant (with the name held in
     // k_PARTICIANT02_NAME) will contain a DataReader described by the 
     // information in the rem_subscription_data struct.
     retcode = DPSE_RemoteSubscription_assert(
             dp,
-            k_PARTICIANT02_NAME,
+            k_PARTICIPANT02_NAME,
+            &rem_subscription_data,
+            my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
+    if (retcode != DDS_RETCODE_OK) {
+        printf("ERROR: failed to assert remote publication\n");
+    }  
+
+    // second remote DataReader
+    rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
+            k_OBJ_ID_PARTICIPANT03_DR01;
+    rem_subscription_data.topic_name = DDS_String_dup(my_topic_name);
+    rem_subscription_data.type_name = 
+            DDS_String_dup(my_typeTypePlugin_get_default_type_name());
+    rem_subscription_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
+
+    // Assert that a remote DomainParticipant (with the name held in
+    // k_PARTICIANT03_NAME) will contain a DataReader described by the 
+    // information in the rem_subscription_data struct.
+    retcode = DPSE_RemoteSubscription_assert(
+            dp,
+            k_PARTICIPANT03_NAME,
             &rem_subscription_data,
             my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
     if (retcode != DDS_RETCODE_OK) {

@@ -237,7 +237,7 @@ int main(void)
     // set the name of the local DomainParticipant (i.e. - this application) 
     // from the constants defined in discovery_constants.h
     // (this is required for DPSE discovery)
-    strcpy(dp_qos.participant_name.name, k_PARTICIANT02_NAME);
+    strcpy(dp_qos.participant_name.name, k_PARTICIPANT03_NAME);
 
     // now the DomainParticipant can be created
     dp = DDS_DomainParticipantFactory_create_participant(
@@ -273,7 +273,7 @@ int main(void)
 
     // assert the remote DomainParticipant whos name is held in 
     // the constant k_PARTICIANT01_NAME, defined in discovery_constants.h
-    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIANT01_NAME);
+    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT01_NAME);
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to assert remote participant\n");
     }
@@ -297,10 +297,10 @@ int main(void)
     // assign to our own DataReader here needs to be the same number the remote
     // DataWriter will configure for its remote peer. We are defining these IDs
     // and other constants in discovery_constants.h
-    dr_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIANT02_DR01;
+    dr_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIPANT03_DR01;
     dr_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
     dr_qos.resource_limits.max_instances = 2;
-    dr_qos.resource_limits.max_samples_per_instance = 32;
+    dr_qos.resource_limits.max_samples_per_instance = 16;
     dr_qos.resource_limits.max_samples = dr_qos.resource_limits.max_instances *
             dr_qos.resource_limits.max_samples_per_instance;
     dr_qos.reader_resource_limits.max_remote_writers = 10;
@@ -322,7 +322,7 @@ int main(void)
     // unique object ID for the remote peer (we are defining this in 
     // discovery_constants.h), as well as its Topic, type, and QoS. 
     rem_publication_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
-            k_OBJ_ID_PARTICIANT01_DW01;
+            k_OBJ_ID_PARTICIPANT01_DW01;
     rem_publication_data.topic_name = DDS_String_dup(my_topic_name);
     rem_publication_data.type_name = 
             DDS_String_dup(my_typeTypePlugin_get_default_type_name());
@@ -333,7 +333,7 @@ int main(void)
     // information in the rem_publication_data struct.
     retcode = DPSE_RemotePublication_assert(
             dp,
-            k_PARTICIANT01_NAME,
+            k_PARTICIPANT01_NAME,
             &rem_publication_data,
             my_type_get_key_kind(my_typeTypePlugin_get(), 
             NULL));
