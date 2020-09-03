@@ -6,9 +6,10 @@
 #
 ################################################################################
 
-This example contains a publishing application and two subscribing applications
-for a simple IDL-defined data type. "example_subscriber_1" uses a listener to be
-notified of events, and "example_subscriber_2" uses a WaitSet.
+This example contains a publishing application and three subscribing 
+applications for a simple IDL-defined data type. "example_subscriber_1" uses a 
+listener to be notified of events, "example_subscriber_2" uses a WaitSet, and
+"example_subscriber_3" simply polls for data.
 
 The purpose of this example is to demonstrate how static endpoint
 discovery (DPSE) can be used between a publisher and subscriber.
@@ -34,9 +35,9 @@ The generated source files are example.c, exampleSupport.c, and
 examplePlugin.c. Associated header files are also generated.
  
 The DataWriter and DataReaders for this type are created and used in 
-example_publisher.c and example_subscriber_1.c and example_subscriber_2.c, 
-respectively. Each application has its own DomainParticipant since the intent 
-is that the executables may run independently of each other.
+example_publisher.c and example_subscriber_[1|2|3].c, respectively. Each 
+application has its own DomainParticipant since the intent is that the 
+executables may run independently of each other.
 
 
 Generated Files Overview
@@ -53,6 +54,10 @@ DataReaderListener, and listening for data.
 example_subscriber_2.c:
 This file contains the logic for creating a Subscriber and a DataReader, a 
 WaitSet, and how to use the WaitSet to be notified of events.
+
+example_subscriber_3.c:
+This file contains the logic for creating a Subscriber and a DataReader, and  
+polling is used (calling take() in a loop) to access data.
 
 examplePlugin.c:
 This file creates the plugin for the example data type.  This file contains 
@@ -115,6 +120,10 @@ Run the second subscriber in another terminal with the command:
 
     > objs\x64Win64VS2017\Release\example_subscriber_2.exe 
 
-And run the publisher in a third terminal with the command:
+Run the third subscriber in third terminal with the command:
+
+    > objs\x64Win64VS2017\Release\example_subscriber_3.exe 
+
+And run the publisher in a forth terminal with the command:
 
     > objs\x64Win64VS2017\Release\example_publisher.exe 
