@@ -81,6 +81,17 @@ add_executable(example_subscriber_2
 target_link_libraries(example_subscriber_2 ${MICRO_C_LIBS} ${PLATFORM_LIBS})
 
 ################################################################################
+# example_subscriber_3
+################################################################################
+add_executable(example_subscriber_3 
+    ${CMAKE_CURRENT_SOURCE_DIR}/example_subscriber_3.${SOURCE_EXTENSION_C}
+    ${IDL_GEN_C}
+    ${IDL_GEN_H}
+)
+
+target_link_libraries(example_subscriber_3 ${MICRO_C_LIBS} ${PLATFORM_LIBS})
+
+################################################################################
 # example_publisher
 ################################################################################
 add_executable(example_publisher

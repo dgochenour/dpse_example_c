@@ -13,4 +13,7 @@ static const int k_OBJ_ID_PARTICIPANT02_DR01     = 200;
 static const char *k_PARTICIPANT03_NAME          = "subscriber_2";
 static const int k_OBJ_ID_PARTICIPANT03_DR01     = 300;
 
+// contants for the other subscribing application (example_subscriber_2.exe)
+static const char *k_PARTICIPANT04_NAME          = "subscriber_3";
+static const int k_OBJ_ID_PARTICIPANT04_DR01     = 400;
 #endif

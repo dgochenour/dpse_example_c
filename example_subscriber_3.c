@@ -19,6 +19,48 @@
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
 
+void take_the_data(DDS_DataReader * reader)
+{
+    my_typeDataReader *narrowed_reader = my_typeDataReader_narrow(reader);
+    struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
+    struct my_typeSeq sample_seq = DDS_SEQUENCE_INITIALIZER;
+    const DDS_Long MAX_SAMPLES_PER_TAKE = 32;
+    DDS_ReturnCode_t retcode;
+
+    retcode = my_typeDataReader_take(
+            narrowed_reader, 
+            &sample_seq, 
+            &info_seq, 
+            MAX_SAMPLES_PER_TAKE, 
+            DDS_ANY_SAMPLE_STATE, 
+            DDS_ANY_VIEW_STATE, 
+            DDS_ANY_INSTANCE_STATE);
+    if (retcode == DDS_RETCODE_NO_DATA) { 
+        printf("INFO: no data\n");
+    } else if (retcode != DDS_RETCODE_OK) {
+        printf("ERROR: failed to take data, retcode = %d\n", retcode);
+    }
+
+    // print each valid sample taken
+    DDS_Long i;
+    for (i = 0; i < my_typeSeq_get_length(&sample_seq); ++i) {
+        struct DDS_SampleInfo *sample_info = 
+                DDS_SampleInfoSeq_get_reference(&info_seq, i);
+        if (sample_info->valid_data) {
+            my_type *sample = my_typeSeq_get_reference(&sample_seq, i);
+
+            printf("\nValid sample received\n");
+            printf("\tsample id = %d\n", sample->id);
+            printf("\tsample msg = %s\n", sample->msg);
+        } else {
+            printf("\nSample received\n\tINVALID DATA\n");
+        }
+    }
+
+    my_typeDataReader_return_loan(narrowed_reader, &sample_seq, &info_seq);
+    my_typeSeq_finalize(&sample_seq);
+    DDS_SampleInfoSeq_finalize(&info_seq);
+}
 
 int main(void)
 {
@@ -39,17 +81,22 @@ int main(void)
     RT_Registry_T *registry = NULL;
     struct UDP_InterfaceFactoryProperty *udp_property = NULL;
     DDS_Topic *topic = NULL;
-    DDS_Publisher *publisher = NULL;
-    DDS_DataWriter *datawriter = NULL;
-    struct DDS_DataWriterQos dw_qos = DDS_DataWriterQos_INITIALIZER;
-    my_type *sample = NULL;
-    my_typeDataWriter *narrowed_datawriter = NULL;
-    struct DDS_SubscriptionBuiltinTopicData rem_subscription_data =
-            DDS_SubscriptionBuiltinTopicData_INITIALIZER;
-    DDS_Entity *entity = NULL;
-    int sample_count = 0;
+    DDS_Subscriber *subscriber = NULL;
+    DDS_DataReader *datareader = NULL;
+    struct DDS_DataReaderQos dr_qos = DDS_DataReaderQos_INITIALIZER;
+    struct DDS_PublicationBuiltinTopicData rem_publication_data =
+        DDS_PublicationBuiltinTopicData_INITIALIZER;
+    DDS_Entity *entity;
+
+    // Waitset related variables
+    DDS_WaitSet *waitset = NULL;
+    DDS_StatusCondition *dr_condition = NULL;
+    struct DDS_ConditionSeq active_conditions = DDS_SEQUENCE_INITIALIZER;
+    struct DDS_Duration_t wait_timeout = { 10, 0 }; /* 10 seconds */
+    int num_active_conditions; // number of active conditions
+
     DDS_ReturnCode_t retcode;
-    DDS_Boolean success = DDS_BOOLEAN_FALSE;
+    int i;
 
     // create the DomainParticipantFactory and registry so that we can make some 
     // changes to the default values
@@ -125,7 +172,7 @@ int main(void)
     	LOG(1, "failed to add interface")
 
     }
-
+    
 #endif
 
     if(!RT_Registry_register(
@@ -172,20 +219,20 @@ int main(void)
     // configure the DomainParticipant's resource limits... these are just 
     // examples, if there are more remote or local endpoints these values would
     // need to be increased
-    dp_qos.resource_limits.max_destination_ports = 4;
-    dp_qos.resource_limits.max_receive_ports = 4;
+    dp_qos.resource_limits.max_destination_ports = 32;
+    dp_qos.resource_limits.max_receive_ports = 32;
     dp_qos.resource_limits.local_topic_allocation = 1;
     dp_qos.resource_limits.local_type_allocation = 1;
     dp_qos.resource_limits.local_reader_allocation = 1;
     dp_qos.resource_limits.local_writer_allocation = 1;
-    dp_qos.resource_limits.remote_participant_allocation = 3;
-    dp_qos.resource_limits.remote_reader_allocation = 3;
-    dp_qos.resource_limits.remote_writer_allocation = 2;
+    dp_qos.resource_limits.remote_participant_allocation = 8;
+    dp_qos.resource_limits.remote_reader_allocation = 8;
+    dp_qos.resource_limits.remote_writer_allocation = 8;
 
     // set the name of the local DomainParticipant (i.e. - this application) 
     // from the constants defined in discovery_constants.h
     // (this is required for DPSE discovery)
-    strcpy(dp_qos.participant_name.name, k_PARTICIPANT01_NAME);
+    strcpy(dp_qos.participant_name.name, k_PARTICIPANT04_NAME);
 
     // now the DomainParticipant can be created
     dp = DDS_DomainParticipantFactory_create_participant(
@@ -206,8 +253,7 @@ int main(void)
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to register type\n");
     }
-
-    // Create the Topic to which we will publish. Note that the name of the 
+    // Create the Topic to which we will subscribe. Note that the name of the 
     // Topic is stored in my_topic_name, which was defined in the IDL 
     topic = DDS_DomainParticipant_create_topic(
             dp,
@@ -220,127 +266,70 @@ int main(void)
         printf("ERROR: topic == NULL\n");
     }
 
-    // assert the 2 remote DomainParticipants (whos names are defined in 
-    // discovery_constants.h) that we are expecting to discover
-    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT02_NAME);
+    // assert the remote DomainParticipant whos name is held in 
+    // the constant k_PARTICIANT01_NAME, defined in discovery_constants.h
+    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT01_NAME);
     if(retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote participant 2\n");
-    }
-    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT03_NAME);
-    if(retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote participant 3\n");
-    }
-    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT04_NAME);
-    if(retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote participant 4\n");
+        printf("ERROR: failed to assert remote participant\n");
     }
 
-    // create the Publisher
-    publisher = DDS_DomainParticipant_create_publisher(
+    // create the Subscriber
+    subscriber = DDS_DomainParticipant_create_subscriber(
             dp,
-            &DDS_PUBLISHER_QOS_DEFAULT,
-            NULL,
+            &DDS_SUBSCRIBER_QOS_DEFAULT,
+            NULL, 
             DDS_STATUS_MASK_NONE);
-    if(publisher == NULL) {
-        printf("ERROR: Publisher == NULL\n");
+    if(subscriber == NULL) {
+        printf("ERROR: subscriber == NULL\n");
     }
 
-    // Configure the DataWriter's QoS. Note that the 'rtps_object_id' that we 
-    // assign to our own DataWriter here needs to be the same number the remote
-    // DataReader will configure for its remote peer. We are defining these IDs
+    // Configure the DataReader's QoS. Note that the 'rtps_object_id' that we 
+    // assign to our own DataReader here needs to be the same number the remote
+    // DataWriter will configure for its remote peer. We are defining these IDs
     // and other constants in discovery_constants.h
-    dw_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIPANT01_DW01;
-    dw_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
-    dw_qos.writer_resource_limits.max_remote_readers = 3;
-    dw_qos.resource_limits.max_samples_per_instance = 16;
-    dw_qos.resource_limits.max_instances = 2;
-    dw_qos.resource_limits.max_samples = dw_qos.resource_limits.max_instances *
-            dw_qos.resource_limits.max_samples_per_instance;
-    dw_qos.history.depth = 16;
-    dw_qos.protocol.rtps_reliable_writer.heartbeat_period.sec = 0;
-    dw_qos.protocol.rtps_reliable_writer.heartbeat_period.nanosec = 250000000;
+    dr_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIPANT04_DR01;
+    dr_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
+    dr_qos.resource_limits.max_instances = 2;
+    dr_qos.resource_limits.max_samples_per_instance = 16;
+    dr_qos.resource_limits.max_samples = dr_qos.resource_limits.max_instances *
+            dr_qos.resource_limits.max_samples_per_instance;
+    dr_qos.reader_resource_limits.max_remote_writers = 10;
+    dr_qos.reader_resource_limits.max_remote_writers_per_instance = 10;
+    dr_qos.history.depth = 16;
 
-    // now create the DataWriter
-    datawriter = DDS_Publisher_create_datawriter(
-            publisher, 
-            topic, 
-            &dw_qos,
+    // create the DataReader
+    datareader = DDS_Subscriber_create_datareader(
+            subscriber,
+            DDS_Topic_as_topicdescription(topic), 
+            &dr_qos,
             NULL,
             DDS_STATUS_MASK_NONE);
-    if(datawriter == NULL) {
-        printf("ERROR: datawriter == NULL\n");
-    }   
+    if(datareader == NULL) {
+        printf("ERROR: datareader == NULL\n");
+    }
 
     // When we use DPSE discovery we must mannually setup information about any 
-    // DataReaders we are expecting to discover, and assert them. In this 
-    // example code we will do this for 2 remote DataReaders. This information 
-    // includes a unique  object ID for the remote peer (we are defining this in 
+    // DataWriters we are expecting to discover. This information includes a 
+    // unique object ID for the remote peer (we are defining this in 
     // discovery_constants.h), as well as its Topic, type, and QoS. 
-
-    // first remote DataReader
-    rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
-            k_OBJ_ID_PARTICIPANT02_DR01;
-    rem_subscription_data.topic_name = DDS_String_dup(my_topic_name);
-    rem_subscription_data.type_name = 
+    rem_publication_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
+            k_OBJ_ID_PARTICIPANT01_DW01;
+    rem_publication_data.topic_name = DDS_String_dup(my_topic_name);
+    rem_publication_data.type_name = 
             DDS_String_dup(my_typeTypePlugin_get_default_type_name());
-    rem_subscription_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
+    rem_publication_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;    
 
-    // Assert that a remote DomainParticipant (with the name held in
-    // k_PARTICIANT02_NAME) will contain a DataReader described by the 
-    // information in the rem_subscription_data struct.
-    retcode = DPSE_RemoteSubscription_assert(
+    // Now we can assert that a remote DomainParticipant (with the name held in
+    // k_PARTICIANT01_NAME) will contain a DataWriter described by the 
+    // information in the rem_publication_data struct.
+    retcode = DPSE_RemotePublication_assert(
             dp,
-            k_PARTICIPANT02_NAME,
-            &rem_subscription_data,
-            my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
+            k_PARTICIPANT01_NAME,
+            &rem_publication_data,
+            my_type_get_key_kind(my_typeTypePlugin_get(), 
+            NULL));
     if (retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to assert remote publication\n");
-    }  
-
-    // second remote DataReader
-    rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
-            k_OBJ_ID_PARTICIPANT03_DR01;
-    rem_subscription_data.topic_name = DDS_String_dup(my_topic_name);
-    rem_subscription_data.type_name = 
-            DDS_String_dup(my_typeTypePlugin_get_default_type_name());
-    rem_subscription_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
-
-    // Assert that a remote DomainParticipant (with the name held in
-    // k_PARTICIANT03_NAME) will contain a DataReader described by the 
-    // information in the rem_subscription_data struct.
-    retcode = DPSE_RemoteSubscription_assert(
-            dp,
-            k_PARTICIPANT03_NAME,
-            &rem_subscription_data,
-            my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
-    if (retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote publication\n");
-    }    
-
-    // third remote DataReader
-    rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
-            k_OBJ_ID_PARTICIPANT04_DR01;
-    rem_subscription_data.topic_name = DDS_String_dup(my_topic_name);
-    rem_subscription_data.type_name = 
-            DDS_String_dup(my_typeTypePlugin_get_default_type_name());
-    rem_subscription_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
-
-    // Assert that a remote DomainParticipant (with the name held in
-    // k_PARTICIANT03_NAME) will contain a DataReader described by the 
-    // information in the rem_subscription_data struct.
-    retcode = DPSE_RemoteSubscription_assert(
-            dp,
-            k_PARTICIPANT04_NAME,
-            &rem_subscription_data,
-            my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
-    if (retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote publication\n");
-    } 
-
-    // create the data sample that we will write
-    sample = my_type_create();
-    if(sample == NULL) {
-        printf("ERROR: failed my_type_create\n");
     }
 
     // Finaly, now that all of the entities are created, we can enable them all
@@ -350,26 +339,10 @@ int main(void)
         printf("ERROR: failed to enable entity\n");
     }
 
-    // A DDS_DataWriter is not type-specific, thus we need to cast, or "narrow"
-    // the DataWriter before we use it to write our samples
-    narrowed_datawriter = my_typeDataWriter_narrow(datawriter);
+    printf("Waiting for samples to arrive, press Ctrl-C to exit\n"); 
     while (1) {
-        
-        // add some data to the sample
-        sample->id = 1; // arbitrary value
-        sprintf(sample->msg, "sample #%d\n", sample_count);
-
-        retcode = my_typeDataWriter_write(
-                narrowed_datawriter, 
-                sample, 
-                &DDS_HANDLE_NIL);
-        if(retcode != DDS_RETCODE_OK) {
-            printf("ERROR: Failed to write sample\n");
-        } else {
-            printf("Wrote sample %d\n", sample_count); 
-            sample_count++;
-        } 
-        OSAPI_Thread_sleep(1000); // sleep 1s between writes 
-    }
+        take_the_data(datareader);
+        OSAPI_Thread_sleep(500); // sleep 500ms before we check for data again        
+    }  
 }
 
