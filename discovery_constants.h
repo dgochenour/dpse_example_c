@@ -1,19 +1,24 @@
 #ifndef RTPS_OBJECT_IDS_H
 #define RTPS_OBJECT_IDS_H
 
-// contants for the publishing application (example_publisher.exe)
+// constants for example_publisher
 static const char *k_PARTICIPANT01_NAME          = "publisher_1";
 static const int k_OBJ_ID_PARTICIPANT01_DW01     = 100;
 
-// contants for one of the subscribing applications (example_subscriber_1.exe) 
+// constants for example_subscriber_1 
 static const char *k_PARTICIPANT02_NAME          = "subscriber_1";
-static const int k_OBJ_ID_PARTICIPANT02_DR01     = 200;
+static const int k_OBJ_ID_PARTICIPANT02_DR01     = 110;
 
-// contants for the other subscribing application (example_subscriber_2.exe)
+// constants for example_subscriber_2
 static const char *k_PARTICIPANT03_NAME          = "subscriber_2";
-static const int k_OBJ_ID_PARTICIPANT03_DR01     = 300;
+static const int k_OBJ_ID_PARTICIPANT03_DR01     = 120;
 
-// contants for the other subscribing application (example_subscriber_2.exe)
+// constants for example_subscriber_3
 static const char *k_PARTICIPANT04_NAME          = "subscriber_3";
-static const int k_OBJ_ID_PARTICIPANT04_DR01     = 400;
+static const int k_OBJ_ID_PARTICIPANT04_DR01     = 130;
+
+// contants for Admin Console
+static const char *k_PARTICIPANT_ADMINCONSOLE_NAME  = "Data Visualization";
+static const int k_OBJ_ID_ADMINCONSOLE_DR01         = 200;
+
 #endif

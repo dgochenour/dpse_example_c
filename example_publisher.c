@@ -19,13 +19,16 @@
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
 
+#define ADMINCONSOLE
 
 int main(void)
 {
     // user-configurable values
     char *peer = "127.0.0.1";
-    char *loopback_name = "Loopback Pseudo-Interface 1";
-    char *eth_nic_name = "Wireless LAN adapter Wi-Fi";
+    char *loopback_name = "lo";         // Ubuntu 20.04
+    char *eth_nic_name = "wlp0s20f3";   // Ubuntu 20.04    
+    // char *loopback_name = "Loopback Pseudo-Interface 1";    // Windows 10
+    // char *eth_nic_name = "Wireless LAN adapter Wi-Fi";      // Windows 10
     int domain_id = 100;
 
     DDS_DomainParticipantFactory *dpf = NULL;
@@ -172,15 +175,22 @@ int main(void)
     // configure the DomainParticipant's resource limits... these are just 
     // examples, if there are more remote or local endpoints these values would
     // need to be increased
-    dp_qos.resource_limits.max_destination_ports = 4;
-    dp_qos.resource_limits.max_receive_ports = 4;
+    dp_qos.resource_limits.max_destination_ports = 8;
+    dp_qos.resource_limits.max_receive_ports = 8;
     dp_qos.resource_limits.local_topic_allocation = 1;
     dp_qos.resource_limits.local_type_allocation = 1;
     dp_qos.resource_limits.local_reader_allocation = 1;
     dp_qos.resource_limits.local_writer_allocation = 1;
+#ifdef ADMINCONSOLE
+    dp_qos.resource_limits.remote_participant_allocation = 5;  
+    dp_qos.resource_limits.remote_reader_allocation = 4; 
+    dp_qos.resource_limits.remote_writer_allocation = 2; 
+    dp_qos.resource_limits.matching_writer_reader_pair_allocation = 128;
+#else
     dp_qos.resource_limits.remote_participant_allocation = 3;
     dp_qos.resource_limits.remote_reader_allocation = 3;
     dp_qos.resource_limits.remote_writer_allocation = 2;
+#endif
 
     // set the name of the local DomainParticipant (i.e. - this application) 
     // from the constants defined in discovery_constants.h
@@ -220,7 +230,7 @@ int main(void)
         printf("ERROR: topic == NULL\n");
     }
 
-    // assert the 2 remote DomainParticipants (whos names are defined in 
+    // assert the remote DomainParticipants (whos names are defined in 
     // discovery_constants.h) that we are expecting to discover
     retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT02_NAME);
     if(retcode != DDS_RETCODE_OK) {
@@ -234,6 +244,12 @@ int main(void)
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to assert remote participant 4\n");
     }
+#ifdef ADMINCONSOLE
+    retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT_ADMINCONSOLE_NAME);
+    if(retcode != DDS_RETCODE_OK) {
+        printf("ERROR: failed to assert Admin Console\n");
+    }
+#endif
 
     // create the Publisher
     publisher = DDS_DomainParticipant_create_publisher(
@@ -251,7 +267,11 @@ int main(void)
     // and other constants in discovery_constants.h
     dw_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIPANT01_DW01;
     dw_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
+#ifdef ADMINCONSOLE
+    dw_qos.writer_resource_limits.max_remote_readers = 4;
+#else    
     dw_qos.writer_resource_limits.max_remote_readers = 3;
+#endif
     dw_qos.resource_limits.max_samples_per_instance = 16;
     dw_qos.resource_limits.max_instances = 2;
     dw_qos.resource_limits.max_samples = dw_qos.resource_limits.max_instances *
@@ -294,7 +314,7 @@ int main(void)
             &rem_subscription_data,
             my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
     if (retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote publication\n");
+        printf("ERROR: failed to assert remote subscription #1\n");
     }  
 
     // second remote DataReader
@@ -314,7 +334,7 @@ int main(void)
             &rem_subscription_data,
             my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
     if (retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote publication\n");
+        printf("ERROR: failed to assert remote subscription #2\n");
     }    
 
     // third remote DataReader
@@ -326,7 +346,7 @@ int main(void)
     rem_subscription_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
 
     // Assert that a remote DomainParticipant (with the name held in
-    // k_PARTICIANT03_NAME) will contain a DataReader described by the 
+    // k_PARTICIANT04_NAME) will contain a DataReader described by the 
     // information in the rem_subscription_data struct.
     retcode = DPSE_RemoteSubscription_assert(
             dp,
@@ -334,8 +354,26 @@ int main(void)
             &rem_subscription_data,
             my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
     if (retcode != DDS_RETCODE_OK) {
-        printf("ERROR: failed to assert remote publication\n");
+        printf("ERROR: failed to assert remote subscription #3\n");
     } 
+#ifdef ADMINCONSOLE
+    // Admin Console's Subscriber
+    rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
+            k_OBJ_ID_ADMINCONSOLE_DR01;
+    rem_subscription_data.topic_name = DDS_String_dup(my_topic_name);
+    rem_subscription_data.type_name = 
+            DDS_String_dup(my_typeTypePlugin_get_default_type_name());
+    rem_subscription_data.reliability.kind = DDS_BEST_EFFORT_RELIABILITY_QOS;
+
+    retcode = DPSE_RemoteSubscription_assert(
+            dp,
+            k_PARTICIPANT_ADMINCONSOLE_NAME,
+            &rem_subscription_data,
+            my_type_get_key_kind(my_typeTypePlugin_get(), NULL));
+    if (retcode != DDS_RETCODE_OK) {
+        printf("ERROR: failed to assert remote Admin Console subscription\n");
+    } 
+#endif
 
     // create the data sample that we will write
     sample = my_type_create();
