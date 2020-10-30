@@ -2,7 +2,7 @@
 
 ## General Overview
 
-The purpose of this example is to demonstrate how static endpoint discovery (DPSE) can be used between several RTI DDS Micro applciations.
+The purpose of this example is to demonstrate how static endpoint discovery (DPSE) can be used between several RTI Connext DDS Micro applciations.
 
 > Note that actual safety-certified libraries generated from the RTI Connext Micro Cert product **only** implement the static DPSE discovery plugin, so DPDE is not an option. 
 
