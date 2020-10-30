@@ -2,7 +2,7 @@
 
 ## General Overview
 
-The purpose of this example is to demonstrate how static endpoint discovery (DPSE) can be used between a publisher and subscriber.
+The purpose of this example is to demonstrate how static endpoint discovery (DPSE) can be used between several RTI DDS Micro applciations.
 
 > Note that actual safety-certified libraries generated from the RTI Connext Micro Cert product **only** implement the static DPSE discovery plugin, so DPDE is not an option. 
 
@@ -12,10 +12,10 @@ This example contains a publishing application and three subscribing application
 * `example_subscriber_2.c` uses a WaitSet
 * `example_subscriber_3.c` simply polls for data
 
-Additionally, information is contained to configure Admin Console for operation with DPSE-based Micro/Cert applications. 
+Additionally, information is presented to assist in the configuration of Admin Console when it must be used with DPSE-based Micro/Cert applications. 
 
 * In `example_publisher.c`, the `ADMINCONSOLE` symbol can be defined (by defualt, it is) to configure "Admin Console-friendly" resource limits and assertions.
-* Guidance related to the configuration of Admin Console itself can be found in [this file](./admin_console_config/README.md).
+* Specifically, guidance and files related to the configuration of Admin Console can be found in this repo's [admin_console_config directory](./admin_console_config/).
 
 ## Source Overview
 
