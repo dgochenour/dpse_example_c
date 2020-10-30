@@ -1,6 +1,7 @@
-# Overview
+# Configuring Admin Console For Static Endpoint Discovery
 
-## Background
+## Overview
+
 One of the core features of DDS is “discovery”-- the mechanism by which a DDS application can learn about other DDS applications and their endpoints. In the majority of DDS applications, the discovery process is fully dynamic, meaning that no a priori knowledge about remote applications is required by the local application.
 
 In some DDS systems however, particularly those that require very high determinism such as safety critical applications, it is advantageous to use “static” endpoint discovery. In this static approach, each DDS application programmatically asserts which remote DomainParticipants it is expecting to discover at runtime, and what DataReaders and DataWriters (endpoints) those remote DomainParticipants contain. These assertions enforce what can be discovered, not necessarily what will be discovered; this is due to the fact that a DomainParticipant the local application is expecting may never actually be present in the system.
