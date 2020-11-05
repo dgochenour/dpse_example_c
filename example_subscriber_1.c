@@ -24,10 +24,13 @@ void my_typeSubscriber_on_subscription_matched(
         DDS_DataReader * reader,
         const struct DDS_SubscriptionMatchedStatus *status)
 {
+    char the_topic_name[64];
+    
+    strcpy(the_topic_name, DDS_TopicDescription_get_name(DDS_DataReader_get_topicdescription(reader)));	
     if (status->current_count_change > 0) {
-        printf("INFO: Matched a publisher\n");
+        printf("INFO: Matched a DataWriter on Topic: '%s'\n", the_topic_name);
     } else if (status->current_count_change < 0) {
-        printf("INFO: Unmatched a publisher\n");
+        printf("INFO: Unmatched a DataWriter on Topic: '%s'\n", the_topic_name);
     }
 }
 
@@ -98,7 +101,6 @@ int main(void)
     DDS_Subscriber *subscriber = NULL;
     DDS_DataReader *datareader = NULL;
     struct DDS_DataReaderQos dr_qos = DDS_DataReaderQos_INITIALIZER;
-    struct DDS_DataReaderListener dr_listener = DDS_DataReaderListener_INITIALIZER;
     struct DDS_PublicationBuiltinTopicData rem_publication_data =
         DDS_PublicationBuiltinTopicData_INITIALIZER;
     DDS_Entity *entity;
@@ -190,6 +192,11 @@ int main(void)
     {
         printf("ERROR: failed to re-register udp\n");
     } 
+
+    struct DDS_Duration_t my_lease = {10,0};
+    struct DDS_Duration_t my_assert_period = {2,0};
+    discovery_plugin_properties.participant_liveliness_lease_duration = my_lease;
+    discovery_plugin_properties.participant_liveliness_assert_period = my_assert_period;
 
     // register the dpse (discovery) component
     if (!RT_Registry_register(
@@ -290,11 +297,6 @@ int main(void)
         printf("ERROR: subscriber == NULL\n");
     }
 
-    // Configure the listener callback. This listener will get passed to the 
-    // DataReader when we create it
-    dr_listener.on_data_available = my_typeSubscriber_on_data_available;
-    dr_listener.on_subscription_matched = my_typeSubscriber_on_subscription_matched;
-
     // Configure the DataReader's QoS. Note that the 'rtps_object_id' that we 
     // assign to our own DataReader here needs to be the same number the remote
     // DataWriter will configure for its remote peer. We are defining these IDs
@@ -309,6 +311,11 @@ int main(void)
     dr_qos.reader_resource_limits.max_remote_writers_per_instance = 10;
     dr_qos.history.depth = 16;
 
+    // Configure the DataReaderListener callback
+    struct DDS_DataReaderListener dr_listener = DDS_DataReaderListener_INITIALIZER;
+    dr_listener.on_data_available = my_typeSubscriber_on_data_available;
+    dr_listener.on_subscription_matched = my_typeSubscriber_on_subscription_matched;
+
     // create the DataReader
     datareader = DDS_Subscriber_create_datareader(
             subscriber,
@@ -319,6 +326,7 @@ int main(void)
     if(datareader == NULL) {
         printf("ERROR: datareader == NULL\n");
     }
+    
     // When we use DPSE discovery we must mannually setup information about any 
     // DataWriters we are expecting to discover. This information includes a 
     // unique object ID for the remote peer (we are defining this in 

@@ -21,6 +21,23 @@
 
 #define ADMINCONSOLE
 
+void on_publication_matched(
+        void *listener_data,
+        DDS_DataWriter * writer,
+        const struct DDS_PublicationMatchedStatus *status) {
+
+    DDS_Topic* the_topic;
+    char the_topic_name[64];
+    
+    the_topic = DDS_DataWriter_get_topic(writer);
+    strcpy(the_topic_name, DDS_TopicDescription_get_name(DDS_Topic_as_topicdescription(the_topic)));	
+    if (status->current_count_change > 0) {
+        printf("INFO: Matched a DataReader on Topic: '%s'\n", the_topic_name);
+    } else if (status->current_count_change < 0) {
+        printf("INFO: Unmatched a DataReader on Topic: '%s'\n", the_topic_name);
+    }
+}
+
 int main(void)
 {
     // user-configurable values
@@ -139,6 +156,11 @@ int main(void)
     {
         printf("ERROR: failed to re-register udp\n");
     } 
+
+    struct DDS_Duration_t my_lease = {10,0};
+    struct DDS_Duration_t my_assert_period = {2,0};
+    discovery_plugin_properties.participant_liveliness_lease_duration = my_lease;
+    discovery_plugin_properties.participant_liveliness_assert_period = my_assert_period;
 
     // register the dpse (discovery) component
     if (!RT_Registry_register(
@@ -280,13 +302,16 @@ int main(void)
     dw_qos.protocol.rtps_reliable_writer.heartbeat_period.sec = 0;
     dw_qos.protocol.rtps_reliable_writer.heartbeat_period.nanosec = 250000000;
 
+    struct DDS_DataWriterListener dw_listener = DDS_DataWriterListener_INITIALIZER;
+    dw_listener.on_publication_matched = on_publication_matched;
+
     // now create the DataWriter
     datawriter = DDS_Publisher_create_datawriter(
             publisher, 
             topic, 
             &dw_qos,
-            NULL,
-            DDS_STATUS_MASK_NONE);
+            &dw_listener,
+            DDS_PUBLICATION_MATCHED_STATUS);
     if(datawriter == NULL) {
         printf("ERROR: datawriter == NULL\n");
     }   

@@ -19,6 +19,21 @@
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
 
+void my_typeSubscriber_on_subscription_matched(
+        void *listener_data,
+        DDS_DataReader * reader,
+        const struct DDS_SubscriptionMatchedStatus *status)
+{
+    char the_topic_name[64];
+    
+    strcpy(the_topic_name, DDS_TopicDescription_get_name(DDS_DataReader_get_topicdescription(reader)));	
+    if (status->current_count_change > 0) {
+        printf("INFO: Matched a DataWriter on Topic: '%s'\n", the_topic_name);
+    } else if (status->current_count_change < 0) {
+        printf("INFO: Unmatched a DataWriter on Topic: '%s'\n", the_topic_name);
+    }
+}
+
 void take_the_data(DDS_DataReader * reader)
 {
     my_typeDataReader *narrowed_reader = my_typeDataReader_narrow(reader);
@@ -186,6 +201,11 @@ int main(void)
         printf("ERROR: failed to re-register udp\n");
     } 
 
+    struct DDS_Duration_t my_lease = {10,0};
+    struct DDS_Duration_t my_assert_period = {2,0};
+    discovery_plugin_properties.participant_liveliness_lease_duration = my_lease;
+    discovery_plugin_properties.participant_liveliness_assert_period = my_assert_period;
+    
     // register the dpse (discovery) component
     if (!RT_Registry_register(
             registry,
@@ -299,13 +319,17 @@ int main(void)
     dr_qos.reader_resource_limits.max_remote_writers_per_instance = 10;
     dr_qos.history.depth = 16;
 
+    // Configure the DataReaderListener callback
+    struct DDS_DataReaderListener dr_listener = DDS_DataReaderListener_INITIALIZER;
+    dr_listener.on_subscription_matched = my_typeSubscriber_on_subscription_matched;
+
     // create the DataReader
     datareader = DDS_Subscriber_create_datareader(
             subscriber,
             DDS_Topic_as_topicdescription(topic), 
             &dr_qos,
-            NULL,
-            DDS_STATUS_MASK_NONE);
+            &dr_listener,
+            DDS_SUBSCRIPTION_MATCHED_STATUS);
     if(datareader == NULL) {
         printf("ERROR: datareader == NULL\n");
     }
