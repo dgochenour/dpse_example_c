@@ -1,6 +1,4 @@
-// This sample code is intended to show that the Connext DDS Micro 2.4.12
-// C API can be called from a C++ application. It is STRICTLY an example and
-// NOT intended to represent production-quality code.
+
 
 #include <stdio.h>
 
@@ -18,7 +16,6 @@
 
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
-
 // Names of network interfaces on the target machine
 #include "nic_config.h"
 
@@ -28,6 +25,8 @@ void on_publication_matched(
         void *listener_data,
         DDS_DataWriter * writer,
         const struct DDS_PublicationMatchedStatus *status) {
+
+    (void)(listener_data);  // to suppress -Wunused-parameter warning
 
     DDS_Topic* the_topic;
     char the_topic_name[64];
@@ -43,18 +42,7 @@ void on_publication_matched(
 
 int main(void)
 {
-    struct DPSE_DiscoveryPluginProperty discovery_plugin_properties =
-            DPSE_DiscoveryPluginProperty_INITIALIZER;
-    DDS_DataWriter *datawriter = NULL;
-    struct DDS_DataWriterQos dw_qos = DDS_DataWriterQos_INITIALIZER;
-    my_type *sample = NULL;
-    my_typeDataWriter *narrowed_datawriter = NULL;
-    struct DDS_SubscriptionBuiltinTopicData rem_subscription_data =
-            DDS_SubscriptionBuiltinTopicData_INITIALIZER;
-    DDS_Entity *entity = NULL;
-    int sample_count = 0;
     DDS_ReturnCode_t retcode;
-    DDS_Boolean success = DDS_BOOLEAN_FALSE;
 
     // create the DomainParticipantFactory and registry so that we can change  
     // some of the default values
@@ -145,6 +133,8 @@ int main(void)
         printf("ERROR: failed to re-register udp\n");
     } 
 
+    struct DPSE_DiscoveryPluginProperty discovery_plugin_properties =
+            DPSE_DiscoveryPluginProperty_INITIALIZER;
     struct DDS_Duration_t my_lease = {10,0};
     struct DDS_Duration_t my_assert_period = {2,0};
     discovery_plugin_properties.participant_liveliness_lease_duration = my_lease;
@@ -283,6 +273,7 @@ int main(void)
     // assign to our own DataWriter here needs to be the same number the remote
     // DataReader will configure for its remote peer. We are defining these IDs
     // and other constants in discovery_constants.h
+    struct DDS_DataWriterQos dw_qos = DDS_DataWriterQos_INITIALIZER;
     dw_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIPANT01_DW01;
     dw_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
 #ifdef ADMINCONSOLE
@@ -302,6 +293,7 @@ int main(void)
     dw_listener.on_publication_matched = on_publication_matched;
 
     // now create the DataWriter
+    DDS_DataWriter *datawriter = NULL;
     datawriter = DDS_Publisher_create_datawriter(
             publisher, 
             topic, 
@@ -317,6 +309,9 @@ int main(void)
     // example code we will do this for 2 remote DataReaders. This information 
     // includes a unique  object ID for the remote peer (we are defining this in 
     // discovery_constants.h), as well as its Topic, type, and QoS. 
+
+    struct DDS_SubscriptionBuiltinTopicData rem_subscription_data =
+            DDS_SubscriptionBuiltinTopicData_INITIALIZER;
 
     // first remote DataReader
     rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
@@ -397,21 +392,25 @@ int main(void)
 #endif
 
     // create the data sample that we will write
+    my_type *sample = NULL;
     sample = my_type_create();
     if(sample == NULL) {
         printf("ERROR: failed my_type_create\n");
     }
 
     // Finaly, now that all of the entities are created, we can enable them all
-    entity = DDS_DomainParticipant_as_entity(dp);
-    retcode = DDS_Entity_enable(entity);
+    retcode = DDS_Entity_enable(DDS_DomainParticipant_as_entity(dp));
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to enable entity\n");
     }
 
     // A DDS_DataWriter is not type-specific, thus we need to cast, or "narrow"
     // the DataWriter before we use it to write our samples
+    my_typeDataWriter *narrowed_datawriter = NULL;
     narrowed_datawriter = my_typeDataWriter_narrow(datawriter);
+
+    int sample_count = 0;
+
     while (1) {
         
         // add some data to the sample
