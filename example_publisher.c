@@ -19,6 +19,9 @@
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
 
+// Names of network interfaces on the target machine
+#include "nic_config.h"
+
 #define ADMINCONSOLE
 
 void on_publication_matched(
@@ -40,15 +43,6 @@ void on_publication_matched(
 
 int main(void)
 {
-    // user-configurable values
-    char *peer = "127.0.0.1";
-    char *loopback_name = "lo";         // Ubuntu 20.04
-    char *eth_nic_name = "wlp0s20f3";   // Ubuntu 20.04    
-    // char *loopback_name = "Loopback Pseudo-Interface 1";    // Windows 10
-    // char *eth_nic_name = "Wireless LAN adapter Wi-Fi";      // Windows 10
-    int domain_id = 100;
-
-
     struct DPSE_DiscoveryPluginProperty discovery_plugin_properties =
             DPSE_DiscoveryPluginProperty_INITIALIZER;
     DDS_DataWriter *datawriter = NULL;
