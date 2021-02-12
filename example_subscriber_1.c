@@ -27,6 +27,8 @@ void my_typeSubscriber_on_subscription_matched(
         DDS_DataReader * reader,
         const struct DDS_SubscriptionMatchedStatus *status)
 {
+    (void)(listener_data);  // to suppress -Wunused-parameter warning
+
     char the_topic_name[64];
     
     strcpy(the_topic_name, DDS_TopicDescription_get_name(DDS_DataReader_get_topicdescription(reader)));	
@@ -41,6 +43,8 @@ void my_typeSubscriber_on_data_available(
         void *listener_data,
         DDS_DataReader * reader)
 {
+    (void)(listener_data);  // to suppress -Wunused-parameter warning
+    
     my_typeDataReader *narrowed_reader = my_typeDataReader_narrow(reader);
     struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
     struct my_typeSeq sample_seq = DDS_SEQUENCE_INITIALIZER;
