@@ -135,7 +135,7 @@ int main(void)
 
     struct DPSE_DiscoveryPluginProperty discovery_plugin_properties =
             DPSE_DiscoveryPluginProperty_INITIALIZER;
-    struct DDS_Duration_t my_lease = {10,0};
+    struct DDS_Duration_t my_lease = {5,0};
     struct DDS_Duration_t my_assert_period = {2,0};
     discovery_plugin_properties.participant_liveliness_lease_duration = my_lease;
     discovery_plugin_properties.participant_liveliness_assert_period = my_assert_period;
