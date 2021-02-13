@@ -1,5 +1,5 @@
-#ifndef RTPS_OBJECT_IDS_H
-#define RTPS_OBJECT_IDS_H
+#ifndef DISCOVERY_CONSTANTS_H
+#define DISCOVERY_CONSTANTS_H
 
 // constants for example_publisher
 static const char *k_PARTICIPANT01_NAME          = "publisher_1";

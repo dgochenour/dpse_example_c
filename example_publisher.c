@@ -1,6 +1,4 @@
-// This sample code is intended to show that the Connext DDS Micro 2.4.12
-// C API can be called from a C++ application. It is STRICTLY an example and
-// NOT intended to represent production-quality code.
+
 
 #include <stdio.h>
 
@@ -18,6 +16,8 @@
 
 // DPSE Discovery-related constants defined in this header
 #include "discovery_constants.h"
+// Names of network interfaces on the target machine
+#include "nic_config.h"
 
 #define ADMINCONSOLE
 
@@ -25,6 +25,8 @@ void on_publication_matched(
         void *listener_data,
         DDS_DataWriter * writer,
         const struct DDS_PublicationMatchedStatus *status) {
+
+    (void)(listener_data);  // to suppress -Wunused-parameter warning
 
     DDS_Topic* the_topic;
     char the_topic_name[64];
@@ -40,40 +42,13 @@ void on_publication_matched(
 
 int main(void)
 {
-    // user-configurable values
-    char *peer = "127.0.0.1";
-    char *loopback_name = "lo";         // Ubuntu 20.04
-    char *eth_nic_name = "wlp0s20f3";   // Ubuntu 20.04    
-    // char *loopback_name = "Loopback Pseudo-Interface 1";    // Windows 10
-    // char *eth_nic_name = "Wireless LAN adapter Wi-Fi";      // Windows 10
-    int domain_id = 100;
-
-    DDS_DomainParticipantFactory *dpf = NULL;
-    struct DDS_DomainParticipantFactoryQos dpf_qos = 
-            DDS_DomainParticipantFactoryQos_INITIALIZER;
-    DDS_DomainParticipant *dp = NULL;
-    struct DDS_DomainParticipantQos dp_qos = 
-            DDS_DomainParticipantQos_INITIALIZER;
-    struct DPSE_DiscoveryPluginProperty discovery_plugin_properties =
-            DPSE_DiscoveryPluginProperty_INITIALIZER;
-    RT_Registry_T *registry = NULL;
-    struct UDP_InterfaceFactoryProperty *udp_property = NULL;
-    DDS_Topic *topic = NULL;
-    DDS_Publisher *publisher = NULL;
-    DDS_DataWriter *datawriter = NULL;
-    struct DDS_DataWriterQos dw_qos = DDS_DataWriterQos_INITIALIZER;
-    my_type *sample = NULL;
-    my_typeDataWriter *narrowed_datawriter = NULL;
-    struct DDS_SubscriptionBuiltinTopicData rem_subscription_data =
-            DDS_SubscriptionBuiltinTopicData_INITIALIZER;
-    DDS_Entity *entity = NULL;
-    int sample_count = 0;
     DDS_ReturnCode_t retcode;
-    DDS_Boolean success = DDS_BOOLEAN_FALSE;
 
-    // create the DomainParticipantFactory and registry so that we can make some 
-    // changes to the default values
+    // create the DomainParticipantFactory and registry so that we can change  
+    // some of the default values
+    DDS_DomainParticipantFactory *dpf = NULL;
     dpf = DDS_DomainParticipantFactory_get_instance();
+    RT_Registry_T *registry = NULL;
     registry = DDS_DomainParticipantFactory_get_registry(dpf);
 
     // register writer history
@@ -110,6 +85,7 @@ int main(void)
         printf("ERROR: failed to unregister udp\n");
     }
 
+    struct UDP_InterfaceFactoryProperty *udp_property = NULL;
     udp_property = (struct UDP_InterfaceFactoryProperty *)
             malloc(sizeof(struct UDP_InterfaceFactoryProperty));
     if (udp_property == NULL) {
@@ -157,6 +133,8 @@ int main(void)
         printf("ERROR: failed to re-register udp\n");
     } 
 
+    struct DPSE_DiscoveryPluginProperty discovery_plugin_properties =
+            DPSE_DiscoveryPluginProperty_INITIALIZER;
     struct DDS_Duration_t my_lease = {5,0};
     struct DDS_Duration_t my_assert_period = {2,0};
     discovery_plugin_properties.participant_liveliness_lease_duration = my_lease;
@@ -177,10 +155,15 @@ int main(void)
     // creating DDS entities. By setting autoenable_created_entities to false 
     // until all of the DDS entities are created, we limit all dynamic memory 
     // allocation to happen *before* the point where we enable everything.
+    struct DDS_DomainParticipantFactoryQos dpf_qos = 
+            DDS_DomainParticipantFactoryQos_INITIALIZER;
     DDS_DomainParticipantFactory_get_qos(dpf, &dpf_qos);
     dpf_qos.entity_factory.autoenable_created_entities = DDS_BOOLEAN_FALSE;
     DDS_DomainParticipantFactory_set_qos(dpf, &dpf_qos);
 
+    struct DDS_DomainParticipantQos dp_qos = 
+            DDS_DomainParticipantQos_INITIALIZER;
+    
     // configure discovery prior to creating our DomainParticipant
     if(!RT_ComponentFactoryId_set_name(&dp_qos.discovery.discovery.name, "dpse")) {
         printf("ERROR: failed to set discovery plugin name\n");
@@ -220,6 +203,7 @@ int main(void)
     strcpy(dp_qos.participant_name.name, k_PARTICIPANT01_NAME);
 
     // now the DomainParticipant can be created
+    DDS_DomainParticipant *dp = NULL;
     dp = DDS_DomainParticipantFactory_create_participant(
             dpf, 
             domain_id,
@@ -241,6 +225,7 @@ int main(void)
 
     // Create the Topic to which we will publish. Note that the name of the 
     // Topic is stored in my_topic_name, which was defined in the IDL 
+    DDS_Topic *topic = NULL;
     topic = DDS_DomainParticipant_create_topic(
             dp,
             my_topic_name, // this constant is defined in the *.idl file
@@ -274,6 +259,7 @@ int main(void)
 #endif
 
     // create the Publisher
+    DDS_Publisher *publisher = NULL;
     publisher = DDS_DomainParticipant_create_publisher(
             dp,
             &DDS_PUBLISHER_QOS_DEFAULT,
@@ -287,6 +273,7 @@ int main(void)
     // assign to our own DataWriter here needs to be the same number the remote
     // DataReader will configure for its remote peer. We are defining these IDs
     // and other constants in discovery_constants.h
+    struct DDS_DataWriterQos dw_qos = DDS_DataWriterQos_INITIALIZER;
     dw_qos.protocol.rtps_object_id = k_OBJ_ID_PARTICIPANT01_DW01;
     dw_qos.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
 #ifdef ADMINCONSOLE
@@ -306,6 +293,7 @@ int main(void)
     dw_listener.on_publication_matched = on_publication_matched;
 
     // now create the DataWriter
+    DDS_DataWriter *datawriter = NULL;
     datawriter = DDS_Publisher_create_datawriter(
             publisher, 
             topic, 
@@ -321,6 +309,9 @@ int main(void)
     // example code we will do this for 2 remote DataReaders. This information 
     // includes a unique  object ID for the remote peer (we are defining this in 
     // discovery_constants.h), as well as its Topic, type, and QoS. 
+
+    struct DDS_SubscriptionBuiltinTopicData rem_subscription_data =
+            DDS_SubscriptionBuiltinTopicData_INITIALIZER;
 
     // first remote DataReader
     rem_subscription_data.key.value[DDS_BUILTIN_TOPIC_KEY_OBJECT_ID] = 
@@ -401,21 +392,25 @@ int main(void)
 #endif
 
     // create the data sample that we will write
+    my_type *sample = NULL;
     sample = my_type_create();
     if(sample == NULL) {
         printf("ERROR: failed my_type_create\n");
     }
 
     // Finaly, now that all of the entities are created, we can enable them all
-    entity = DDS_DomainParticipant_as_entity(dp);
-    retcode = DDS_Entity_enable(entity);
+    retcode = DDS_Entity_enable(DDS_DomainParticipant_as_entity(dp));
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to enable entity\n");
     }
 
     // A DDS_DataWriter is not type-specific, thus we need to cast, or "narrow"
     // the DataWriter before we use it to write our samples
+    my_typeDataWriter *narrowed_datawriter = NULL;
     narrowed_datawriter = my_typeDataWriter_narrow(datawriter);
+
+    int sample_count = 0;
+
     while (1) {
         
         // add some data to the sample
