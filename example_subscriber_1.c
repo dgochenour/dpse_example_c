@@ -30,6 +30,16 @@
 // Names of network interfaces on the target machine
 #include "nic_config.h"
 
+void my_typeSubscriber_on_requested_deadline_missed(
+        void *listener_data,
+        DDS_DataReader * reader,
+        const struct DDS_RequestedDeadlineMissedStatus *status) 
+{   
+    (void)(listener_data);  // to suppress -Wunused-parameter warning
+    printf("INFO: Deadline missed! This has happened %d times\n", 
+            status->total_count);
+}
+
 void my_typeSubscriber_on_subscription_matched(
         void *listener_data,
         DDS_DataReader * reader,
@@ -314,10 +324,19 @@ int main(void)
     dr_qos.reader_resource_limits.max_remote_writers_per_instance = 10;
     dr_qos.history.depth = 16;
 
+    // Configure a deadline. In the case of a DataReader, this is the period in 
+    // which we are expecting to receive >=1 sample for each instance of which
+    // we are aware. (2.0s here, as an example)
+    dr_qos.deadline.period.sec = 2;
+    dr_qos.deadline.period.nanosec = 0;
+
     // Configure the DataReaderListener callback
     struct DDS_DataReaderListener dr_listener = DDS_DataReaderListener_INITIALIZER;
     dr_listener.on_data_available = my_typeSubscriber_on_data_available;
-    dr_listener.on_subscription_matched = my_typeSubscriber_on_subscription_matched;
+    dr_listener.on_subscription_matched = 
+            my_typeSubscriber_on_subscription_matched;
+    dr_listener.on_requested_deadline_missed = 
+            my_typeSubscriber_on_requested_deadline_missed;
 
     // create the DataReader
     DDS_DataReader *datareader = NULL;
@@ -326,12 +345,14 @@ int main(void)
             DDS_Topic_as_topicdescription(topic), 
             &dr_qos,
             &dr_listener,
-            DDS_DATA_AVAILABLE_STATUS | DDS_SUBSCRIPTION_MATCHED_STATUS);
+            DDS_DATA_AVAILABLE_STATUS | 
+            DDS_SUBSCRIPTION_MATCHED_STATUS | 
+            DDS_REQUESTED_DEADLINE_MISSED_STATUS);
     if(datareader == NULL) {
         printf("ERROR: datareader == NULL\n");
     }
     
-    // When we use DPSE discovery we must mannually setup information about any 
+    // When we use DPSE discovery we must manually setup information about any 
     // DataWriters we are expecting to discover. This information includes a 
     // unique object ID for the remote peer (we are defining this in 
     // discovery_constants.h), as well as its Topic, type, and QoS. 
@@ -342,7 +363,9 @@ int main(void)
     rem_publication_data.topic_name = DDS_String_dup(my_topic_name);
     rem_publication_data.type_name = 
             DDS_String_dup(my_typeTypePlugin_get_default_type_name());
-    rem_publication_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;    
+    rem_publication_data.reliability.kind = DDS_RELIABLE_RELIABILITY_QOS;
+    rem_publication_data.deadline.period.sec = 1;
+    rem_publication_data.deadline.period.nanosec = 500000000;    
 
     // Now we can assert that a remote DomainParticipant (with the name held in
     // k_PARTICIANT01_NAME) will contain a DataWriter described by the 

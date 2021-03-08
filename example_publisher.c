@@ -299,6 +299,12 @@ int main(void)
     dw_qos.protocol.rtps_reliable_writer.heartbeat_period.sec = 0;
     dw_qos.protocol.rtps_reliable_writer.heartbeat_period.nanosec = 250000000;
 
+    // Configure a deadline. In the case of a DataWriter, this is the period in 
+    // which we are "promising" to send >=1 sample for each instance we are 
+    // updating. (1.5s here, as an example)
+    dw_qos.deadline.period.sec = 1;
+    dw_qos.deadline.period.nanosec = 500000000;
+
     struct DDS_DataWriterListener dw_listener = DDS_DataWriterListener_INITIALIZER;
     dw_listener.on_publication_matched = on_publication_matched;
 
