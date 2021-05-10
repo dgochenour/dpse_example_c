@@ -83,7 +83,7 @@ int main(void)
     }
 
     // Set up the UDP transport's allowed interfaces. To do this we:
-    // (1) unregister the UDP trasport
+    // (1) unregister the UDP transport
     // (2) name the allowed interfaces
     // (3) re-register the transport
     if(!RT_Registry_unregister(
@@ -161,7 +161,7 @@ int main(void)
         printf("ERROR: failed to register dpse\n");
     }
 
-    // Now that we've finsihed the changes to the registry, we will start 
+    // Now that we've finished the changes to the registry, we will start 
     // creating DDS entities. By setting autoenable_created_entities to false 
     // until all of the DDS entities are created, we limit all dynamic memory 
     // allocation to happen *before* the point where we enable everything.
@@ -247,7 +247,7 @@ int main(void)
         printf("ERROR: topic == NULL\n");
     }
 
-    // assert the remote DomainParticipants (whos names are defined in 
+    // assert the remote DomainParticipants (who's names are defined in 
     // discovery_constants.h) that we are expecting to discover
     retcode = DPSE_RemoteParticipant_assert(dp, k_PARTICIPANT02_NAME);
     if(retcode != DDS_RETCODE_OK) {
@@ -320,7 +320,7 @@ int main(void)
         printf("ERROR: datawriter == NULL\n");
     }   
 
-    // When we use DPSE discovery we must mannually setup information about any 
+    // When we use DPSE discovery we must manually setup information about any 
     // DataReaders we are expecting to discover, and assert them. In this 
     // example code we will do this for 2 remote DataReaders. This information 
     // includes a unique  object ID for the remote peer (we are defining this in 
@@ -414,7 +414,7 @@ int main(void)
         printf("ERROR: failed my_type_create\n");
     }
 
-    // Finaly, now that all of the entities are created, we can enable them all
+    // Finally, now that all of the entities are created, we can enable them all
     retcode = DDS_Entity_enable(DDS_DomainParticipant_as_entity(dp));
     if(retcode != DDS_RETCODE_OK) {
         printf("ERROR: failed to enable entity\n");
