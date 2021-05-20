@@ -38,6 +38,11 @@ void my_typeSubscriber_on_requested_deadline_missed(
     (void)(listener_data);  // to suppress -Wunused-parameter warning
     printf("INFO: Deadline missed! This has happened %d times\n", 
             status->total_count);
+    printf("INFO: The last instance handle was: ");
+    for (int i = 0; i < 16; i++) {
+        printf("%d ", status->last_instance_handle.octet[i]);
+    }
+    printf("\n");
 }
 
 void my_typeSubscriber_on_subscription_matched(
