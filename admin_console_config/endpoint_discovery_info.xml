@@ -38,4 +38,36 @@
         </datareader>
     </participant>    
 
+    <participant name="subscriber_2">
+        <datareader>
+            <rtps_object_id>120</rtps_object_id>
+            <topic_name>my_topic</topic_name>
+            <type_name>my_type</type_name>
+            <topic_keyed>true</topic_keyed>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+                <direct_communication>true</direct_communication>
+            </durability>
+            <reliability>
+                <kind>RELIABLE_RELIABILITY_QOS</kind>
+            </reliability>
+        </datareader>
+    </participant>   
+
+    <participant name="subscriber_3">
+        <datareader>
+            <rtps_object_id>130</rtps_object_id>
+            <topic_name>my_topic</topic_name>
+            <type_name>my_type</type_name>
+            <topic_keyed>true</topic_keyed>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+                <direct_communication>true</direct_communication>
+            </durability>
+            <reliability>
+                <kind>RELIABLE_RELIABILITY_QOS</kind>
+            </reliability>
+        </datareader>
+    </participant>   
+
 </LBEDiscoveryPluginProfile>
