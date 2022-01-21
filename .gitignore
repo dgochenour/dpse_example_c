@@ -1,3 +1,9 @@
 .vscode
 build/
 objs/
+
+# don't track generated type-support files
+example.c
+example.h
+examplePlugin.*
+exampleSupport.*
