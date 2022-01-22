@@ -1,4 +1,4 @@
-# Working With DPSE Discovery  </br>RTI Connext DDS Micro 2.4.12, C API
+# Working With DPSE Discovery  </br>RTI Connext DDS Micro 2.4.14, C API
 
 ## General Overview
 
