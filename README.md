@@ -6,7 +6,7 @@ The purpose of this example is to demonstrate how static endpoint discovery (DPS
 
 > Note that actual safety-certified libraries generated from the RTI Connext Micro Cert product **only** implement the static DPSE discovery plugin, so DPDE is not an option. 
 
-This example contains a publishing application and three subscribing applications based on a simple IDL-defined data type. Each subscribing app demonstrates a different method avialble to access received user data; which method is most appropriate for a user application will depend on the nature of that application.
+This example contains a publishing application and three subscribing applications based on a simple IDL-defined data type. Each subscribing app demonstrates a different method available to access received user data; which method is most appropriate for a user application will depend on the nature of that application.
 
 * `example_subscriber_1.c` uses a DataReader listener to be notified of events
 * `example_subscriber_2.c` uses a WaitSet
@@ -90,8 +90,8 @@ The following assumptions are made:
 
 * The environment variable `RTIMEHOME` is set to the Connext Micro installation directory 
 * Micro libraries exist in your installation for the architecture in question
-    * For example `x64Win64VS2017` or `x64Linux5gcc9.3.0` 
-* If you are unsure if this is the case, please consult [the product documentation](https://community.rti.com/static/documentation/connext-micro/2.4.12/doc/html/usersmanual/index.html).
+    * For example `x64Win64VS2017` or `x64Linux4gcc7.3.0` 
+* If you are unsure if this is the case, please consult [the product documentation](https://community.rti.com/static/documentation/connext-micro/2.4.14/doc/html/usersmanual/index.html).
 
 
 ### Windows: 
@@ -102,7 +102,7 @@ The following assumptions are made:
 ### Linux: 
 
     $ cd your/project/directory 
-    $ $RTIMEHOME/resource/scripts/rtime-make --config Release --build --name x64Linux5gcc9.3.0 --target Linux --source-dir . -G "Unix Makefiles" --delete
+    $ $RTIMEHOME/resource/scripts/rtime-make --config Release --build --name x64Linux4gcc7.3.0 --target Linux --source-dir . -G "Unix Makefiles" --delete
 
 After the build completes, the executables can be found in the `objs/<architecture>` directory.
 
