@@ -14,7 +14,7 @@ This example contains a publishing application and three subscribing application
 
 Additionally, information is presented to assist in the configuration of Admin Console when it must be used with DPSE-based Micro/Cert applications. 
 
-* In `example_publisher.c`, the `ADMINCONSOLE` symbol can be defined (by defualt, it is) to configure "Admin Console-friendly" resource limits and assertions.
+* In `example_publisher.c`, the `ADMINCONSOLE` symbol can be defined (by default, it is) to configure "Admin Console-friendly" resource limits and assertions.
 * Specifically, guidance and files related to the configuration of Admin Console can be found in this repo's [admin_console_config directory](./admin_console_config/).
 
 ## Source Overview
