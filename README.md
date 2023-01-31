@@ -30,7 +30,7 @@ manually, with an example command like this:
 
     > %RTIMEHOME%\rtiddsgen\scripts\rtiddsgen -micro -language C -create typefiles example.idl
 
-### Linux:
+### Linux and MacOS:
 
     $ $RTIMEHOME/rtiddsgen/scripts/rtiddsgen -micro -language C -create typefiles ./example.idl
 
@@ -71,18 +71,23 @@ This file contains the APIs for managing the example type.
 
 ## Environment-Specific Values
 
-Note that there a few variables at the top of `main()` in both the publisher and subscriber code that may need to be changed to match your system:
+Note that the file `nic_config.h` contains information about NIC naming and the initial peer-- this may need to be changed to match your system:
 
     // user-configurable values
+    int domain_id = 100;
     char *peer = "127.0.0.1";
+
     char *loopback_name = "lo";         // Ubuntu 20.04
     char *eth_nic_name = "wlp0s20f3";   // Ubuntu 20.04    
+
     // char *loopback_name = "Loopback Pseudo-Interface 1";    // Windows 10
     // char *eth_nic_name = "Wireless LAN adapter Wi-Fi";      // Windows 10
-    int domain_id = 100;
+
+    // char *loopback_name = "lo0";        // MacOS 12.6.x
+    // char *eth_nic_name = "en0";         // MacOS 12.6.x 
 
 By default, the initial peer is set to the loopback address (allowing the examples to discover each other on the same machine only) and DDS Domain 100 is 
-used. The names of the network interfaces should match the actual host where the example is running (defaults are provided for typical Ubuntu 20.04 and Windows 10.)
+used. The names of the network interfaces should match the actual host where the example is running (defaults are provided for typical Ubuntu, Windows, and MacOS environments.)
 
 ## Compiling w/ cmake
 
@@ -90,7 +95,7 @@ The following assumptions are made:
 
 * The environment variable `RTIMEHOME` is set to the Connext Micro installation directory 
 * Micro libraries exist in your installation for the architecture in question
-    * For example `x64Win64VS2017` or `x64Linux4gcc7.3.0` 
+    * For example `x64Win64VS2017`, `x64Linux4gcc7.3.0`, or `x64Darwin17clang9.0` 
 * If you are unsure if this is the case, please consult [the product documentation](https://community.rti.com/static/documentation/connext-micro/2.4.14/doc/html/usersmanual/index.html).
 
 
