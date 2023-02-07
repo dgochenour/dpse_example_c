@@ -34,6 +34,11 @@ manually, with an example command like this:
 
     $ $RTIMEHOME/rtiddsgen/scripts/rtiddsgen -micro -language C -create typefiles ./example.idl
 
+Note that `gcc` 11.3.0 (default under Ubuntu 22.04) breaks the pre-processor handling in the version of `rtiddsgen` delivered with Connext Micro 2.4.14. This version of Micro was released first, so it would have been impossible to anticipate the change. The workaround is simple-- if you are using `gcc` 11.3.0 simply add the `-ppOption -P` options to the arguments as shown below:
+
+
+    $ $RTIMEHOME/rtiddsgen/scripts/rtiddsgen -micro -language C -ppOption -P -create typefiles ./example.idl
+
 The generated source files are `example.c`, `exampleSupport.c`, and `examplePlugin.c`. Associated header files are also generated.
  
 The DataWriter and DataReaders for this type are created and used in `example_publisher.c` and `example_subscriber_[1|2|3].c`, respectively. Each application has its own DomainParticipant since the intent is that the executables may run independently of each other.
